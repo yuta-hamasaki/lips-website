@@ -17,6 +17,14 @@ Published microCMS records are treated as `published` when the optional custom `
 
 If no events appear, check the server log for `MICROCMS_CONFIG_MISSING`, `MICROCMS_AUTH_FAILED`, or `microCMS request failed`. Invalid records are logged with only their content ID and missing field names; credentials and response bodies are never logged.
 
+To verify the service domain, API key, endpoint, and GET permission without starting the app, run:
+
+```bash
+npm run test:microcms
+```
+
+The command reads `.env` and `.env.local`, never prints the API key, and returns a non-zero exit code with a diagnostic hint when the connection fails.
+
 ## Database deployment
 
 Never reset a shared Neon database. For a new database or after reviewing the checked-in SQL, deploy migrations with:
