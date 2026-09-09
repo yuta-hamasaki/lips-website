@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Event {
+  id         String   @id @default(cuid())
+  microCmsId String   @unique
+  slug       String   @unique
+  title      String
+  eventDate  DateTime?
+  venue      String?
+  ticketLabel String?
+  orders     Order[]
+  tickets    Ticket[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  orders    Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+model Order {
+  id                    String        @id @default(cuid())
+  customerId            String
+  eventId               String
+  stripeSessionId       String        @unique
+  stripePaymentIntentId String?       @unique
+  amount                Int
+  currency              String
+  paymentStatus         PaymentStatus @default(PAID)
+  ticketEmailStatus     EmailStatus   @default(PENDING)
+  ticketEmailSentAt     DateTime?
+  customer              Customer      @relation(fields: [customerId], references: [id])
+  event                 Event         @relation(fields: [eventId], references: [id])
+  tickets               Ticket[]
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([customerId])
+  @@index([eventId])
+}
+
+model Ticket {
+  id          String       @id @default(cuid())
+  orderId     String
+  eventId     String
+  accessToken String       @unique
+  qrToken     String       @unique
+  status      TicketStatus @default(VALID)
+  usedAt      DateTime?
+  order       Order        @relation(fields: [orderId], references: [id])
+  event       Event        @relation(fields: [eventId], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([eventId, status])
+  @@index([orderId])
+}
+
+enum TicketStatus {
+  VALID
+  USED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PAID
+  REFUNDED
+}
+
+enum EmailStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+}
