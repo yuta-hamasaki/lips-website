@@ -1,5 +1,6 @@
 import type { Artist, Event } from './types'
 import { getPublishedEvents, hasMicroCmsConfig } from '@/lib/events/get-event'
+import type { CmsEvent } from '@/lib/events/types'
 
 // Temporary local content source. Keep consumers behind these functions so this
 // file can be replaced by a microCMS client without changing page components.
@@ -11,7 +12,12 @@ const artists: Artist[] = [
 
 export async function getEvents(): Promise<Event[]> {
   if (!hasMicroCmsConfig()) return []
-  const events = await getPublishedEvents()
+  let events: CmsEvent[]
+  try { events = await getPublishedEvents() }
+  catch (error) {
+    console.error('Unable to load homepage events', error instanceof Error ? error.message : 'Unknown error')
+    return []
+  }
   return events.map((event) => ({
     id: event.id,
     title: event.title,
