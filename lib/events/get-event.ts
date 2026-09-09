@@ -1,73 +1,18 @@
 import 'server-only'
-import type { CmsEvent, CmsImage, CmsPerson } from './types'
+import type { CmsEvent } from './types'
 
 type MicroCmsList<T> = { contents: T[]; totalCount: number }
-type MicroCmsRecord = Record<string, unknown> & { id?: unknown }
 
 function config() {
-  const domain = process.env.MICROCMS_SERVICE_DOMAIN?.trim()
-  const apiKey = process.env.MICROCMS_API_KEY?.trim()
-  const endpoint = process.env.MICROCMS_EVENTS_ENDPOINT?.trim() || 'events'
-  if (!domain || !apiKey) throw new Error('MICROCMS_CONFIG_MISSING')
-  return { domain: domain.replace(/^https?:\/\//, '').replace(/\.microcms\.io\/?$/, ''), apiKey, endpoint }
+  const domain = process.env.MICROCMS_SERVICE_DOMAIN
+  const apiKey = process.env.MICROCMS_API_KEY
+  const endpoint = process.env.MICROCMS_EVENTS_ENDPOINT ?? 'events'
+  if (!domain || !apiKey) throw new Error('microCMS is not configured')
+  return { domain, apiKey, endpoint }
 }
 
 export function hasMicroCmsConfig(): boolean {
-  return Boolean(process.env.MICROCMS_SERVICE_DOMAIN?.trim() && process.env.MICROCMS_API_KEY?.trim())
-}
-
-function optionalString(record: MicroCmsRecord, ...keys: string[]): string | undefined {
-  for (const key of keys) {
-    const value = record[key]
-    if (typeof value === 'string' && value.trim()) return value.trim()
-  }
-}
-
-function people(value: unknown): CmsPerson[] | undefined {
-  if (!Array.isArray(value)) return undefined
-  return value.flatMap((item) => {
-    if (typeof item === 'string') return [{ name: item }]
-    if (!item || typeof item !== 'object') return []
-    const record = item as MicroCmsRecord
-    const name = optionalString(record, 'name')
-    return name ? [{ id: optionalString(record, 'id'), name }] : []
-  })
-}
-
-function image(value: unknown): CmsImage | undefined {
-  if (!value || typeof value !== 'object') return undefined
-  const record = value as MicroCmsRecord
-  const url = optionalString(record, 'url')
-  return url ? { url, width: typeof record.width === 'number' ? record.width : undefined, height: typeof record.height === 'number' ? record.height : undefined } : undefined
-}
-
-function normalizeEvent(record: MicroCmsRecord): CmsEvent | null {
-  const id = optionalString(record, 'id')
-  const title = optionalString(record, 'title', 'eventTitle')
-  const slug = optionalString(record, 'slug')
-  const date = optionalString(record, 'date', 'eventDate')
-  const venue = optionalString(record, 'venue')
-  const invalidDate = Boolean(date && Number.isNaN(Date.parse(date)))
-  if (!id || !title || !slug || !date || invalidDate || !venue) {
-    console.warn('Skipped invalid microCMS event', { microCmsId: id ?? 'unknown', missingRequiredFields: { title: !title, slug: !slug, date: !date, validDate: invalidDate, venue: !venue } })
-    return null
-  }
-  const rawStatus = optionalString(record, 'status', 'eventStatus')?.toLowerCase()
-  const status: CmsEvent['status'] = rawStatus === 'draft' || rawStatus === 'sold-out' || rawStatus === 'cancelled' ? rawStatus : 'published'
-  return {
-    id, title, slug, date, venue, status,
-    description: optionalString(record, 'description') ?? '',
-    doorsOpen: optionalString(record, 'doorsOpen'),
-    startTime: optionalString(record, 'startTime'),
-    address: optionalString(record, 'address'),
-    heroImage: image(record.heroImage),
-    artists: people(record.artists),
-    djs: people(record.djs),
-    ticketSalesStart: optionalString(record, 'ticketSalesStart'),
-    ticketSalesEnd: optionalString(record, 'ticketSalesEnd'),
-    stripePriceId: optionalString(record, 'stripePriceId', 'stripePriceID'),
-    ticketLabel: optionalString(record, 'ticketLabel'),
-  }
+  return Boolean(process.env.MICROCMS_SERVICE_DOMAIN && process.env.MICROCMS_API_KEY)
 }
 
 async function microCmsFetch<T>(path: string): Promise<T> {
