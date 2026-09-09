@@ -1,0 +1,24 @@
+CREATE TYPE "TicketStatus" AS ENUM ('VALID', 'USED', 'CANCELLED');
+CREATE TYPE "PaymentStatus" AS ENUM ('PAID', 'REFUNDED');
+CREATE TYPE "EmailStatus" AS ENUM ('PENDING', 'SENDING', 'SENT', 'FAILED');
+
+CREATE TABLE "Event" ("id" TEXT NOT NULL, "microCmsId" TEXT NOT NULL, "slug" TEXT NOT NULL, "title" TEXT NOT NULL, "eventDate" TIMESTAMP(3), "venue" TEXT, "ticketLabel" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "Event_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "Customer" ("id" TEXT NOT NULL, "name" TEXT NOT NULL, "email" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "Customer_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "Order" ("id" TEXT NOT NULL, "customerId" TEXT NOT NULL, "eventId" TEXT NOT NULL, "stripeSessionId" TEXT NOT NULL, "stripePaymentIntentId" TEXT, "amount" INTEGER NOT NULL, "currency" TEXT NOT NULL, "paymentStatus" "PaymentStatus" NOT NULL DEFAULT 'PAID', "ticketEmailStatus" "EmailStatus" NOT NULL DEFAULT 'PENDING', "ticketEmailSentAt" TIMESTAMP(3), "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "Order_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "Ticket" ("id" TEXT NOT NULL, "orderId" TEXT NOT NULL, "eventId" TEXT NOT NULL, "accessToken" TEXT NOT NULL, "qrToken" TEXT NOT NULL, "status" "TicketStatus" NOT NULL DEFAULT 'VALID', "usedAt" TIMESTAMP(3), "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "Ticket_pkey" PRIMARY KEY ("id"));
+CREATE UNIQUE INDEX "Event_microCmsId_key" ON "Event"("microCmsId");
+CREATE UNIQUE INDEX "Event_slug_key" ON "Event"("slug");
+CREATE UNIQUE INDEX "Customer_email_key" ON "Customer"("email");
+CREATE INDEX "Customer_email_idx" ON "Customer"("email");
+CREATE UNIQUE INDEX "Order_stripeSessionId_key" ON "Order"("stripeSessionId");
+CREATE UNIQUE INDEX "Order_stripePaymentIntentId_key" ON "Order"("stripePaymentIntentId");
+CREATE INDEX "Order_customerId_idx" ON "Order"("customerId");
+CREATE INDEX "Order_eventId_idx" ON "Order"("eventId");
+CREATE UNIQUE INDEX "Ticket_accessToken_key" ON "Ticket"("accessToken");
+CREATE UNIQUE INDEX "Ticket_qrToken_key" ON "Ticket"("qrToken");
+CREATE INDEX "Ticket_eventId_status_idx" ON "Ticket"("eventId", "status");
+CREATE INDEX "Ticket_orderId_idx" ON "Ticket"("orderId");
+ALTER TABLE "Order" ADD CONSTRAINT "Order_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Order" ADD CONSTRAINT "Order_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Ticket" ADD CONSTRAINT "Ticket_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Ticket" ADD CONSTRAINT "Ticket_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

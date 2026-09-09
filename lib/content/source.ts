@@ -1,21 +1,9 @@
 import type { Artist, Event } from './types'
+import { getPublishedEvents, hasMicroCmsConfig } from '@/lib/events/get-event'
+import type { CmsEvent } from '@/lib/events/types'
 
 // Temporary local content source. Keep consumers behind these functions so this
 // file can be replaced by a microCMS client without changing page components.
-const events: Event[] = [
-  {
-    id: 'lips-vancouver-2026',
-    title: 'Lips — R&B / Hip-Hop Night',
-    startsAt: '2026-06-26T22:00:00-07:00',
-    venue: 'Cabana',
-    city: 'Vancouver',
-    eyebrow: 'One night only',
-    description: 'Slow-burn R&B, future-facing hip-hop, and a room full of good people.',
-    ticketUrl: '#tickets',
-    status: 'published',
-  },
-]
-
 const artists: Artist[] = [
   { id: 'dj-sora', name: 'DJ SORA', role: 'MIDNIGHT SET', image: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=85' },
   { id: 'andy-davis', name: 'ANDY DAVIS', role: 'LIVE PERFORMANCE', image: 'https://images.unsplash.com/photo-1504257432389-52343af06ae3?auto=format&fit=crop&w=900&q=85' },
@@ -23,7 +11,23 @@ const artists: Artist[] = [
 ]
 
 export async function getEvents(): Promise<Event[]> {
-  return events.filter((event) => event.status === 'published')
+  if (!hasMicroCmsConfig()) return []
+  let events: CmsEvent[]
+  try { events = await getPublishedEvents() }
+  catch (error) {
+    console.error('Unable to load homepage events', error instanceof Error ? error.message : 'Unknown error')
+    return []
+  }
+  return events.map((event) => ({
+    id: event.id,
+    title: event.title,
+    startsAt: event.startTime ? `${event.date.slice(0, 10)}T${event.startTime}` : event.date,
+    venue: event.venue,
+    city: event.address?.split(',').at(-1)?.trim() || 'Vancouver',
+    description: event.description,
+    ticketUrl: `/events/${event.slug}`,
+    status: 'published',
+  }))
 }
 
 export async function getArtists(): Promise<Artist[]> {
