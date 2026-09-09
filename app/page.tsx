@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import { ArrowRight, Globe2, Menu, Play, Plus, Sparkles } from 'lucide-react'
 
 const StarField = dynamic(() => import('./StarField'), { ssr: false })
+const HeroLip = dynamic(() => import('./HeroLip'), { ssr: false })
 
 const artists = [
   { name: 'DJ SORA', role: 'MIDNIGHT SET', image: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=85' },
@@ -17,6 +18,7 @@ export default function Home() {
       <div className="hero-image" />
       <div className="hero-gradient" />
       <StarField />
+      <HeroLip />
       <header>
         <a className="brand" href="#home">Lips<span>.</span></a>
         <nav>{['Home', 'About', 'Lineup', 'Experience', 'Info'].map(item => <a key={item} href={`#${item.toLowerCase()}`}>{item}</a>)}</nav>
