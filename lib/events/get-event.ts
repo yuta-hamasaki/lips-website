@@ -52,8 +52,15 @@ function normalizeEvent(record: MicroCmsRecord): CmsEvent | null {
     console.warn('Skipped invalid microCMS event', { microCmsId: id ?? 'unknown', missingRequiredFields: { title: !title, slug: !slug, date: !date, validDate: invalidDate, venue: !venue } })
     return null
   }
-  const rawStatus = optionalString(record, 'status', 'eventStatus')?.toLowerCase()
-  const status: CmsEvent['status'] = rawStatus === 'draft' || rawStatus === 'sold-out' || rawStatus === 'cancelled' ? rawStatus : 'published'
+  // microCMS select fields return arrays, even for a single selection.
+  const statusValue = record.status ?? record.eventStatus
+  const rawStatus = (Array.isArray(statusValue) && statusValue.length === 1 ? statusValue[0] : statusValue)
+  const normalizedStatus = typeof rawStatus === 'string' ? rawStatus.trim().toLowerCase() : undefined
+  const status: CmsEvent['status'] = statusValue == null
+    ? 'published'
+    : normalizedStatus === 'published' || normalizedStatus === 'sold-out' || normalizedStatus === 'cancelled'
+      ? normalizedStatus
+      : 'draft'
   return {
     id, title, slug, date, venue, status,
     description: optionalString(record, 'description') ?? '',

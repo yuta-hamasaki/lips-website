@@ -21,7 +21,7 @@ export async function getEvents(): Promise<Event[]> {
   return events.map((event) => ({
     id: event.id,
     title: event.title,
-    startsAt: event.startTime ? `${event.date.slice(0, 10)}T${event.startTime}` : event.date,
+    startsAt: event.date,
     venue: event.venue,
     city: event.address?.split(',').at(-1)?.trim() || 'Vancouver',
     description: event.description,
