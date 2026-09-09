@@ -23,7 +23,7 @@ To verify the service domain, API key, endpoint, and GET permission without star
 npm run test:microcms
 ```
 
-The command reads `.env` and `.env.local`, never prints the API key, and returns a non-zero exit code with a diagnostic hint when the connection fails.
+The command reads `.env` and `.env.local`, never prints the API key, and returns a non-zero exit code with a diagnostic hint when the connection fails. It also checks up to 100 returned records against the homepage requirements and reports, by content ID, records hidden because required fields are missing, their status is excluded, or their event date is invalid or already past.
 
 ## Database deployment
 

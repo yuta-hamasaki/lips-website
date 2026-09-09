@@ -30,8 +30,32 @@ if (!rawDomain || !apiKey) {
 
 const domain = rawDomain.replace(/^https?:\/\//, '').replace(/\.microcms\.io\/?$/, '')
 const url = new URL(`https://${domain}.microcms.io/api/v1/${endpoint}`)
-url.searchParams.set('limit', '1')
-url.searchParams.set('fields', 'id')
+url.searchParams.set('limit', '100')
+
+function stringField(record, ...keys) {
+  for (const key of keys) {
+    const value = record?.[key]
+    if (typeof value === 'string' && value.trim()) return value.trim()
+  }
+}
+
+function homepageExclusion(record, now = new Date()) {
+  const title = stringField(record, 'title', 'eventTitle')
+  const slug = stringField(record, 'slug')
+  const date = stringField(record, 'date', 'eventDate')
+  const venue = stringField(record, 'venue')
+  const missing = [!title && 'title/eventTitle', !slug && 'slug', !date && 'date/eventDate', !venue && 'venue'].filter(Boolean)
+  if (missing.length) return `必須フィールド不足: ${missing.join(', ')}`
+
+  const status = stringField(record, 'status', 'eventStatus')?.toLowerCase()
+  if (status === 'draft' || status === 'sold-out' || status === 'cancelled') return `status=${status}`
+
+  const startsAt = stringField(record, 'startTime') ? `${date.slice(0, 10)}T${stringField(record, 'startTime')}` : date
+  const timestamp = Date.parse(startsAt)
+  if (Number.isNaN(timestamp)) return `開催日時を解釈できません: ${startsAt}`
+  if (timestamp < now.getTime()) return `開催日時が過去です: ${startsAt}`
+  return null
+}
 
 try {
   const response = await fetch(url, { headers: { 'X-MICROCMS-API-KEY': apiKey } })
@@ -51,7 +75,18 @@ try {
     console.error('microCMSには接続できましたが、リストAPIとして認識できないレスポンスでした。')
     process.exit(1)
   }
+  const diagnostics = data.contents.map((record) => ({ id: stringField(record, 'id') ?? 'unknown', reason: homepageExclusion(record) }))
+  const visible = diagnostics.filter(({ reason }) => reason === null)
+  const excluded = diagnostics.filter(({ reason }) => reason !== null)
+
   console.log(`microCMSへの接続に成功しました: ${endpoint} (${data.totalCount}件)`)
+  console.log(`フロントページ表示対象: ${visible.length}件 / 確認した${data.contents.length}件`)
+  for (const { id, reason } of excluded) console.warn(`- ${id}: 非表示 (${reason})`)
+  if (data.totalCount > data.contents.length) console.warn(`先頭${data.contents.length}件のみ診断しました。`)
+  if (!visible.length) {
+    console.error('接続には成功していますが、フロントページに表示できるイベントがありません。')
+    process.exit(1)
+  }
 } catch (error) {
   console.error('microCMSへの接続に失敗しました:', error instanceof Error ? error.message : error)
   process.exit(1)
