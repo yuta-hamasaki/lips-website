@@ -14,8 +14,11 @@ export type Event = {
 export type Artist = {
   id: string
   name: string
-  role: string
+  role?: string
   image: string
+  imageWidth?: number
+  imageHeight?: number
+  description: string
   eventIds?: string[]
 }
 
