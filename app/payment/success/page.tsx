@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import TicketActions from '@/components/TicketActions'
 import { appUrl } from '@/lib/env'
 import { prisma } from '@/lib/prisma'
 import { getStripe } from '@/lib/stripe'
@@ -25,5 +26,5 @@ export default async function SuccessPage({ searchParams }: { searchParams: { se
   const ticketUrl = ticketPath ? `${appUrl()}${ticketPath}` : null
   const qr = ticket ? await generateQrDataUrl(ticket.qrToken) : null
 
-  return <main className="center-page"><section className="notice-card success-card"><p className="micro">PAYMENT RECEIVED</p><h1>Thank you.</h1>{ticket && ticketPath && ticketUrl && qr ? <><p>Your ticket is ready. Save this QR code or open the ticket URL below.</p><div className="success-qr"><img src={qr} alt="Ticket check-in QR code" width="240" height="240"/></div><a className="ticket-url" href={ticketPath}>{ticketUrl}</a><div className="success-actions"><Link className="ticket-button" href={ticketPath}>VIEW TICKET</Link><Link className="outline-button" href="/">BACK TO HOME</Link></div></> : <><p>We could not display your ticket yet. It will arrive by email shortly.</p><p className="sales-note">Please refresh this page in a moment.</p><Link className="outline-button home-button" href="/">BACK TO HOME</Link></>}</section></main>
+  return <main className="center-page"><section className="notice-card success-card"><p className="micro">PAYMENT RECEIVED</p><h1>Thank you.</h1>{ticket && ticketPath && ticketUrl && qr ? <><p>Your ticket is ready. Save this QR code or open the ticket URL below.</p><div className="success-qr"><img src={qr} alt="Ticket check-in QR code" width="240" height="240"/></div><a className="ticket-url" href={ticketPath}>{ticketUrl}</a><div className="success-actions"><Link className="outline-button" href={ticketPath}>VIEW TICKET</Link><TicketActions accessToken={ticket.accessToken}/></div></> : <><p>We could not display your ticket yet. It will arrive by email shortly.</p><p className="sales-note">Please refresh this page in a moment.</p><TicketActions /></>}</section></main>
 }
