@@ -46,4 +46,4 @@ Use `npx prisma migrate dev --name <change>` only against a disposable developme
 stripe listen --forward-to localhost:3000/api/stripe/webhook
 ```
 
-Put the printed signing secret in `STRIPE_WEBHOOK_SECRET`. Ticket issuance occurs only in the signed webhook, never on the success page.
+Put the printed signing secret in `STRIPE_WEBHOOK_SECRET`. The signed webhook remains the reliable fulfillment path. The payment success page also retrieves the Checkout Session directly from Stripe and uses the same idempotent issuance function so the QR code and ticket URL can be shown immediately.
