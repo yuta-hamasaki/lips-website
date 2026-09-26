@@ -1,6 +1,7 @@
-import { ArrowRight, Globe2, Menu } from 'lucide-react'
+import { ArrowRight, Globe2 } from 'lucide-react'
 import type { HeroEvent } from '@/lib/content/types'
 import HeroVisuals from './HeroVisuals'
+import MobileMenu from './MobileMenu'
 
 export default function HeroSection({ event }: { event: HeroEvent }) {
   return <section className="hero" id="home">
@@ -9,7 +10,7 @@ export default function HeroSection({ event }: { event: HeroEvent }) {
       <a className="brand" href="#home">Lips<span>.</span></a>
       <nav>{['Home', 'About', 'Events', 'Lineup', 'Experience', 'Info'].map(item => <a key={item} href={`#${item.toLowerCase()}`}>{item}</a>)}</nav>
       <div className="header-right"><span>MUSIC</span><span>PEOPLE</span><span>CULTURE</span><Globe2 size={20}/><a className="outline-button" href={event.ticketUrl ?? '#events'}>{event.ticketUrl ? 'GET TICKETS' : 'VIEW EVENTS'} <ArrowRight size={16}/></a></div>
-      <button className="menu" aria-label="Open menu"><Menu/></button>
+      <MobileMenu/>
     </header>
     <div className="eyebrow">GOOD<br/>MUSIC<br/>BETTER<br/>PEOPLE</div>
     <div className="hero-copy">

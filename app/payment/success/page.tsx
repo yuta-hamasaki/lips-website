@@ -1,10 +1,9 @@
-import Link from 'next/link'
 import TicketActions from '@/components/TicketActions'
-import { appUrl } from '@/lib/env'
+import TicketCard from '@/components/TicketCard'
+import { getTicketByAccessToken } from '@/lib/tickets/get-ticket'
 import { prisma } from '@/lib/prisma'
 import { getStripe } from '@/lib/stripe'
 import { issueTicketForSession } from '@/lib/tickets/create-ticket'
-import { generateQrDataUrl } from '@/lib/tickets/generate-qr'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,10 +20,15 @@ export default async function SuccessPage({ searchParams }: { searchParams: { se
     }
   }
 
-  const ticket = order?.tickets[0]
-  const ticketPath = ticket ? `/ticket/${ticket.accessToken}` : null
-  const ticketUrl = ticketPath ? `${appUrl()}${ticketPath}` : null
-  const qr = ticket ? await generateQrDataUrl(ticket.qrToken) : null
+  const issuedTicket = order?.tickets[0]
+  const ticket = issuedTicket ? await getTicketByAccessToken(issuedTicket.accessToken) : null
 
-  return <main className="center-page"><section className="notice-card success-card"><p className="micro">PAYMENT RECEIVED</p><h1>Thank you.</h1>{ticket && ticketPath && ticketUrl && qr ? <><p>Your ticket is ready. Save this QR code or open the ticket URL below.</p><div className="success-qr"><img src={qr} alt="Ticket check-in QR code" width="240" height="240"/></div><a className="ticket-url" href={ticketPath}>{ticketUrl}</a><div className="success-actions"><Link className="outline-button" href={ticketPath}>VIEW TICKET</Link><TicketActions accessToken={ticket.accessToken}/></div></> : <><p>We could not display your ticket yet. It will arrive by email shortly.</p><p className="sales-note">Please refresh this page in a moment.</p><TicketActions /></>}</section></main>
+  return <main className="center-page ticket-page">
+    <section className="payment-heading" aria-labelledby="payment-title">
+      <p className="micro">{ticket ? 'PAYMENT RECEIVED' : 'TICKET STATUS'}</p>
+      <h1 id="payment-title">{ticket ? "You're on the list." : 'Checking your ticket.'}</h1>
+      <p>{ticket ? 'Your ticket is ready. Save it and present the QR code at the door.' : 'Your ticket is not available yet. If payment is complete, check your email or refresh this page in a moment.'}</p>
+    </section>
+    {ticket ? <TicketCard ticket={ticket} /> : <TicketActions />}
+  </main>
 }
