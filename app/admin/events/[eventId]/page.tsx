@@ -1,13 +1,23 @@
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { adminDate, revenueByCurrency } from '@/lib/admin-format'
+import AdminTicketList from '@/components/AdminTicketList'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AdminEventPage({ params }: { params: { eventId: string } }) {
   const event = await prisma.event.findUnique({ where: { id: params.eventId }, include: { orders: { orderBy: { createdAt: 'desc' }, include: { customer: true, tickets: true } }, tickets: true } })
   if (!event) notFound()
-  const counts = { valid: event.tickets.filter((t) => t.status === 'VALID').length, used: event.tickets.filter((t) => t.status === 'USED').length, cancelled: event.tickets.filter((t) => t.status === 'CANCELLED').length }
-  const paid = event.orders.filter((order) => order.paymentStatus === 'PAID')
-  const revenue = paid.reduce((sum, order) => sum + order.amount, 0)
-  return <main className="admin-page"><section><a href="/admin/events">← ALL EVENTS</a><p className="micro">EVENT REPORT</p><h1>{event.title}</h1><div className="stats"><div><span>SOLD</span><strong>{event.tickets.length}</strong></div><div><span>VALID</span><strong>{counts.valid}</strong></div><div><span>USED</span><strong>{counts.used}</strong></div><div><span>CANCELLED</span><strong>{counts.cancelled}</strong></div><div><span>REVENUE</span><strong>{new Intl.NumberFormat('en-CA', { style: 'currency', currency: paid[0]?.currency ?? 'CAD' }).format(revenue / 100)}</strong></div></div><div className="table-wrap"><table><thead><tr><th>NAME</th><th>EMAIL</th><th>ORDER DATE</th><th>TICKET ID</th><th>STATUS</th><th>STRIPE SESSION</th></tr></thead><tbody>{event.orders.flatMap((order) => order.tickets.map((ticket) => <tr key={ticket.id}><td>{order.customer.name}</td><td>{order.customer.email}</td><td>{order.createdAt.toLocaleString()}</td><td>#{ticket.id.slice(-8).toUpperCase()}</td><td>{ticket.status}</td><td>{order.stripeSessionId}</td></tr>))}</tbody></table></div></section></main>
+  const paid = event.orders.filter(order => order.paymentStatus === 'PAID')
+  const stats = [
+    ['発行チケット', event.tickets.length],
+    ['未入場', event.tickets.filter(t => t.status === 'VALID').length],
+    ['入場済み', event.tickets.filter(t => t.status === 'USED').length],
+    ['キャンセル', event.tickets.filter(t => t.status === 'CANCELLED').length],
+    ['顧客数', new Set(event.orders.map(o => o.customerId)).size],
+    ['売上（返金除外）', revenueByCurrency(paid)],
+    ['返金額', revenueByCurrency(event.orders.filter(o => o.paymentStatus === 'REFUNDED'))],
+  ]
+  const tickets = event.orders.flatMap(order => order.tickets.map(ticket => ({ id: ticket.id, name: order.customer.name, email: order.customer.email, date: adminDate(order.createdAt), status: ticket.status, paymentStatus: order.paymentStatus, accessToken: ticket.accessToken, qrToken: ticket.qrToken, usedAt: ticket.usedAt ? adminDate(ticket.usedAt) : null })))
+  return <main className="admin-page"><section><nav className="admin-actions"><a href="/admin/events">← EVENTS</a><a href="/admin/customers">CUSTOMERS</a><a href="/admin/check-in">CHECK-IN</a></nav><p className="micro">EVENT REPORT</p><h1>{event.title}</h1><div className="stats">{stats.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div><h2>購入者・入場管理</h2><AdminTicketList eventId={event.id} tickets={tickets}/></section></main>
 }
