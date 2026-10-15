@@ -46,7 +46,13 @@ Use `npx prisma migrate dev --name <change>` only against a disposable developme
 stripe listen --forward-to localhost:3000/api/stripe/webhook
 ```
 
-Put the printed signing secret in `STRIPE_WEBHOOK_SECRET`. The signed webhook remains the reliable fulfillment path. The payment success page also retrieves the Checkout Session directly from Stripe and uses the same idempotent issuance function so the QR code and ticket URL can be shown immediately.
+Keep this command running during test purchases, put its printed signing secret in `STRIPE_WEBHOOK_SECRET`, and restart the development server. A dashboard endpoint cannot deliver directly to localhost. For production, register `https://<your-site>/api/stripe/webhook` in Stripe, subscribe to `checkout.session.completed`, and configure that endpoint's signing secret on the deployed server.
+
+The signed webhook remains the reliable fulfillment path. The payment success page also retrieves the Checkout Session directly from Stripe and uses the same idempotent issuance function so the QR code and ticket URL can be shown immediately. Both paths attempt email delivery; already sent or currently sending orders are skipped. Email failures return a non-success webhook response so Stripe can retry without issuing another ticket. The success page still displays the ticket if email fails; revisiting it retries PENDING or FAILED delivery.
+
+Set `RESEND_API_KEY` and a `RESEND_FROM_EMAIL` using a verified domain. Set `NEXT_PUBLIC_APP_URL` to the public site URL in production so emailed ticket links work for buyers. Resend API acceptance is recorded as SENT; actual inbox delivery must be checked in Resend's Emails dashboard.
+
+Run the isolated email regression checks with `node --test scripts/tests/ticket-email.cjs`.
 
 ## 管理画面の使い方
 

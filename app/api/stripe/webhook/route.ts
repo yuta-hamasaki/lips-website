@@ -20,7 +20,10 @@ export async function POST(request: Request) {
     const order = await issueTicketForSession(session)
     console.info('Ticket issuance complete', { webhookEventId: event.id, stripeSessionId: session.id, eventId: order.eventId, orderId: order.id, ticketId: order.tickets[0]?.id })
     try { await sendTicketEmailOnce(order.id) }
-    catch (emailError) { console.error('Ticket email failed', { webhookEventId: event.id, orderId: order.id, message: emailError instanceof Error ? emailError.message : 'Unknown error' }) }
+    catch (emailError) {
+      console.error('Ticket email failed', { webhookEventId: event.id, orderId: order.id, message: emailError instanceof Error ? emailError.message : 'Unknown error' })
+      throw emailError
+    }
     return NextResponse.json({ received: true })
   } catch (error) {
     console.error('Webhook processing failed', { webhookEventId: event.id, message: error instanceof Error ? error.message : 'Unknown error' })

@@ -14,13 +14,12 @@ export async function sendTicketEmailOnce(orderId: string): Promise<void> {
   })
   if (claimed.count === 0) return
 
-  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { customer: true, event: true, tickets: true } })
-  const ticket = order?.tickets[0]
-  if (!order || !ticket) throw new Error('Ticket email data is missing')
-  const baseUrl = appUrl()
-  const ticketUrl = `${baseUrl}/ticket/${ticket.accessToken}`
-
   try {
+    const order = await prisma.order.findUnique({ where: { id: orderId }, include: { customer: true, event: true, tickets: true } })
+    const ticket = order?.tickets[0]
+    if (!order || !ticket) throw new Error('Ticket email data is missing')
+    const baseUrl = appUrl()
+    const ticketUrl = `${baseUrl}/ticket/${ticket.accessToken}`
     const qrImage = await generateQrBuffer(ticket.qrToken)
     const response = await getResend().emails.send({
       from: process.env.RESEND_FROM_EMAIL ?? 'LIPS Tickets <onboarding@resend.dev>',
@@ -37,7 +36,7 @@ export async function sendTicketEmailOnce(orderId: string): Promise<void> {
     await prisma.order.update({ where: { id: order.id }, data: { ticketEmailStatus: 'SENT', ticketEmailSentAt: new Date() } })
     console.info('Ticket email sent', { orderId: order.id, ticketId: ticket.id, emailResultId: response.data?.id })
   } catch (error) {
-    await prisma.order.update({ where: { id: order.id }, data: { ticketEmailStatus: 'FAILED' } })
+    await prisma.order.update({ where: { id: orderId }, data: { ticketEmailStatus: 'FAILED' } })
     throw error
   }
 }

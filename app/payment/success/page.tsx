@@ -4,6 +4,7 @@ import { getTicketByAccessToken } from '@/lib/tickets/get-ticket'
 import { prisma } from '@/lib/prisma'
 import { getStripe } from '@/lib/stripe'
 import { issueTicketForSession } from '@/lib/tickets/create-ticket'
+import { sendTicketEmailOnce } from '@/lib/tickets/send-ticket-email'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +18,13 @@ export default async function SuccessPage({ searchParams }: { searchParams: { se
       order = await issueTicketForSession(session)
     } catch (error) {
       console.error('Unable to issue ticket on success page', { sessionId, message: error instanceof Error ? error.message : 'Unknown error' })
+    }
+  }
+
+  if (order) {
+    try { await sendTicketEmailOnce(order.id) }
+    catch (error) {
+      console.error('Unable to send ticket email on success page', { orderId: order.id, message: error instanceof Error ? error.message : 'Unknown error' })
     }
   }
 
