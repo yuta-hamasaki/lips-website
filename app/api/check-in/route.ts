@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { checkInRequestFailure } from '@/lib/check-in-request'
 
 export async function POST(request: NextRequest) {
-  if (!isAdminRequest(request)) return NextResponse.json({ result: 'UNAUTHORIZED' }, { status: 401 })
+  if (!await isAdminRequest(request)) return NextResponse.json({ result: 'UNAUTHORIZED' }, { status: 401 })
   const failure = checkInRequestFailure(request)
   if (failure) return NextResponse.json({ result: failure.result }, { status: failure.status })
   const body = await request.json().catch(() => null) as { qrToken?: unknown; eventId?: unknown; confirm?: unknown } | null

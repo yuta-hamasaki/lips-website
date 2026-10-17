@@ -1,3 +1,4 @@
+import AdminSalesChart from '@/components/AdminSalesChart'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { adminDate, revenueByCurrency } from '@/lib/admin-format'
@@ -19,5 +20,5 @@ export default async function AdminEventPage({ params }: { params: { eventId: st
     ['返金額', revenueByCurrency(event.orders.filter(o => o.paymentStatus === 'REFUNDED'))],
   ]
   const tickets = event.orders.flatMap(order => order.tickets.map(ticket => ({ id: ticket.id, name: ticket.holderName, email: order.customer.email, date: adminDate(order.createdAt), status: ticket.status, paymentStatus: order.paymentStatus, accessToken: ticket.accessToken, qrToken: ticket.qrToken, usedAt: ticket.usedAt ? adminDate(ticket.usedAt) : null })))
-  return <main className="admin-page"><section><nav className="admin-actions"><a href="/admin/events">← EVENTS</a><a href="/admin/customers">CUSTOMERS</a><a href="/admin/check-in">CHECK-IN</a></nav><p className="micro">EVENT REPORT</p><h1>{event.title}</h1><div className="stats">{stats.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div><h2>購入者・入場管理</h2><AdminTicketList eventId={event.id} tickets={tickets}/></section></main>
+  return <main className="admin-page"><section><nav className="admin-actions"><a href="/admin/events">← EVENTS</a><a href="/admin/customers">CUSTOMERS</a><a href="/admin/check-in">CHECK-IN</a></nav><p className="micro">EVENT REPORT</p><h1>{event.title}</h1><div className="stats">{stats.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div><AdminSalesChart now={new Date().toISOString()} orders={event.orders.map(order => ({ amount: order.amount, currency: order.currency, paymentStatus: order.paymentStatus, createdAt: order.createdAt.toISOString() }))}/><h2>購入者・入場管理</h2><AdminTicketList eventId={event.id} tickets={tickets}/></section></main>
 }
