@@ -18,6 +18,6 @@ export default async function AdminEventPage({ params }: { params: { eventId: st
     ['売上（返金除外）', revenueByCurrency(paid)],
     ['返金額', revenueByCurrency(event.orders.filter(o => o.paymentStatus === 'REFUNDED'))],
   ]
-  const tickets = event.orders.flatMap(order => order.tickets.map(ticket => ({ id: ticket.id, name: order.customer.name, email: order.customer.email, date: adminDate(order.createdAt), status: ticket.status, paymentStatus: order.paymentStatus, accessToken: ticket.accessToken, qrToken: ticket.qrToken, usedAt: ticket.usedAt ? adminDate(ticket.usedAt) : null })))
+  const tickets = event.orders.flatMap(order => order.tickets.map(ticket => ({ id: ticket.id, name: ticket.holderName, email: order.customer.email, date: adminDate(order.createdAt), status: ticket.status, paymentStatus: order.paymentStatus, accessToken: ticket.accessToken, qrToken: ticket.qrToken, usedAt: ticket.usedAt ? adminDate(ticket.usedAt) : null })))
   return <main className="admin-page"><section><nav className="admin-actions"><a href="/admin/events">← EVENTS</a><a href="/admin/customers">CUSTOMERS</a><a href="/admin/check-in">CHECK-IN</a></nav><p className="micro">EVENT REPORT</p><h1>{event.title}</h1><div className="stats">{stats.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div><h2>購入者・入場管理</h2><AdminTicketList eventId={event.id} tickets={tickets}/></section></main>
 }

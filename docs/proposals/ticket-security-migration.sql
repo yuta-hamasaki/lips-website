@@ -1,0 +1,3 @@
+-- Moved to the official Prisma migration:
+-- ../../prisma/migrations/20261016000000_ticket_holder_refund_security/migration.sql
+-- Follow ticket-security-migration.md; do not run a second copy of the SQL.

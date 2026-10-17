@@ -57,6 +57,7 @@ model Order {
 model Ticket {
   id          String       @id @default(cuid())
   orderId     String
+  holderName  String
   eventId     String
   accessToken String       @unique
   qrToken     String       @unique
@@ -87,4 +88,11 @@ enum EmailStatus {
   SENDING
   SENT
   FAILED
+}
+
+// Retained even when refund delivery precedes local order creation.
+model RefundedPayment {
+  paymentIntentId String   @id
+  stripeEventId   String   @unique
+  createdAt       DateTime @default(now())
 }

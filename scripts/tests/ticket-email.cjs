@@ -21,20 +21,21 @@ function load(file, mocks) {
   return exports
 }
 
-function emailHarness({ preparationFails = false, sendFails = false } = {}) {
+function emailHarness({ preparationFails = false, sendFails = false, paid = true, cancelled = false } = {}) {
   let status = 'PENDING'
   let sends = 0
+  let renderedName
   const order = {
-    id: 'order-1', customer: { email: 'buyer@example.com', name: 'Buyer' },
-    event: { title: 'Event' }, tickets: [{ id: 'ticket-1', accessToken: 'access', qrToken: 'qr' }],
+    id: 'order-1', paymentStatus: paid ? 'PAID' : 'REFUNDED', customer: { email: 'buyer@example.com', name: 'Buyer' },
+    event: { title: 'Event' }, tickets: [{ id: 'ticket-1', holderName: 'Ticket Guest', status: cancelled ? 'CANCELLED' : 'VALID', accessToken: 'access', qrToken: 'qr' }],
   }
   const api = load('lib/tickets/send-ticket-email.ts', {
     'server-only': {},
-    '@/emails/ticket-email': { ticketEmailHtml: () => '<p>Ticket</p>' },
+    '@/emails/ticket-email': { ticketEmailHtml: props => { renderedName = props.customerName; return '<p>Ticket</p>' } },
     '@/lib/env': { appUrl: () => { if (preparationFails) throw new Error('Missing URL'); return 'https://example.com' } },
     '@/lib/prisma': { prisma: { order: {
       updateMany: async () => {
-        if (!['PENDING', 'FAILED'].includes(status)) return { count: 0 }
+        if (!paid || !['PENDING', 'FAILED'].includes(status)) return { count: 0 }
         status = 'SENDING'; return { count: 1 }
       },
       findUnique: async () => order,
@@ -46,7 +47,7 @@ function emailHarness({ preparationFails = false, sendFails = false } = {}) {
     } } }) },
     '@/lib/tickets/generate-qr': { generateQrBuffer: async () => Buffer.from('qr') },
   })
-  return { ...api, status: () => status, sends: () => sends }
+  return { ...api, status: () => status, sends: () => sends, renderedName: () => renderedName }
 }
 
 test('concurrent delivery and repeat calls send the ticket once', async () => {
@@ -81,6 +82,7 @@ test('webhook returns 500 on email failure so Stripe can retry', async () => {
         webhooks: { constructEvent: () => ({ id: 'evt-1', type: 'checkout.session.completed', data: { object: { id: 'session-1' } } }) },
         checkout: { sessions: { retrieve: async () => ({ id: 'session-1' }) } },
       }) },
+      '@/lib/tickets/refund-ticket': { revokeFullyRefundedPayment: async () => {} },
       '@/lib/tickets/create-ticket': { issueTicketForSession: async () => ({ id: 'order-1', tickets: [] }) },
       '@/lib/tickets/send-ticket-email': { sendTicketEmailOnce: async () => { throw new Error('Rejected') } },
     })
@@ -89,5 +91,20 @@ test('webhook returns 500 on email failure so Stripe can retry', async () => {
   } finally {
     if (previous === undefined) delete process.env.STRIPE_WEBHOOK_SECRET
     else process.env.STRIPE_WEBHOOK_SECRET = previous
+  }
+})
+
+
+test('email renders the ticket holder snapshot, not the shared customer name', async () => {
+  const h = emailHarness()
+  await h.sendTicketEmailOnce('order-1')
+  assert.equal(h.renderedName(), 'Ticket Guest')
+})
+
+test('refunded orders and cancelled tickets never send a ready email', async () => {
+  for (const options of [{ paid: false }, { cancelled: true }]) {
+    const h = emailHarness(options)
+    await h.sendTicketEmailOnce('order-1')
+    assert.equal(h.sends(), 0)
   }
 })

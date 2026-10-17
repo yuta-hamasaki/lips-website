@@ -9,7 +9,7 @@ export default async function TicketCard({ ticket }: { ticket: NonNullable<Await
     label: ticket.event.ticketLabel ?? 'GENERAL ADMISSION',
     date: ticket.event.eventDate?.toLocaleString('en-CA', { dateStyle: 'long', timeStyle: 'short', timeZone: 'America/Vancouver' }) ?? 'TBA',
     venue: ticket.event.venue ?? 'TBA',
-    name: ticket.order.customer.name,
+    name: ticket.holderName,
     email: ticket.order.customer.email,
     number: ticket.id.slice(-8).toUpperCase(),
     status: ticket.status,

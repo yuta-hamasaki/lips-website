@@ -26,9 +26,9 @@ export default function AdminTicketList({ eventId, tickets }: { eventId: string;
     setBusy(true)
     setMessage('')
     try {
-      const response = await fetch('/api/check-in', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventId, qrToken: ticket.qrToken, confirm: true }) })
+      const response = await fetch('/api/check-in', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-LIPS-Check-In': '1' }, body: JSON.stringify({ eventId, qrToken: ticket.qrToken, confirm: true }) })
       const data = await response.json()
-      const messages: Record<string, string> = { USED: '入場を記録しました。', ALREADY_USED: 'すでに入場済みです。', CANCELLED: 'キャンセルされたチケットです。', UNPAID: '返金された注文は入場できません。', UNAUTHORIZED: '管理者として再ログインしてください。', WRONG_EVENT: '別のイベントのチケットです。' }
+      const messages: Record<string, string> = { USED: '入場を記録しました。', ALREADY_USED: 'すでに入場済みです。', CANCELLED: 'キャンセルされたチケットです。', UNPAID: '返金された注文は入場できません。', UNAUTHORIZED: '管理者として再ログインしてください。', WRONG_EVENT: '別のイベントのチケットです。', FORBIDDEN: 'リクエスト元を確認できません。管理画面を開き直してください。', UNSUPPORTED_MEDIA_TYPE: 'リクエスト形式が正しくありません。', SERVER_CONFIGURATION_ERROR: '管理画面のURL設定を確認してください。' }
       setMessage(messages[data.result] ?? '入場処理に失敗しました。再度お試しください。')
       if (data.result === 'USED' || data.result === 'ALREADY_USED') { setConfirming(null); router.refresh() }
     } catch { setMessage('通信に失敗しました。再度お試しください。') }

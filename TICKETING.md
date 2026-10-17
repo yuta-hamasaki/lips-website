@@ -3,7 +3,7 @@
 ## Services
 
 - **microCMS** owns event content. Create an `events` endpoint with the fields represented by `CmsEvent` in `lib/events/types.ts`. `stripePriceId` is only a reference; Stripe Price owns the charged unit amount.
-- **Stripe** owns payment. Configure the production webhook URL as `/api/stripe/webhook` and subscribe to `checkout.session.completed`.
+- **Stripe** owns payment. Configure the production webhook URL as `/api/stripe/webhook` and subscribe to `checkout.session.completed` and `charge.refunded`.
 - **Neon/PostgreSQL** owns customers, orders, issued tickets, and check-in state.
 - **Resend** sends the ticket after the database transaction commits.
 
@@ -46,7 +46,7 @@ Use `npx prisma migrate dev --name <change>` only against a disposable developme
 stripe listen --forward-to localhost:3000/api/stripe/webhook
 ```
 
-Keep this command running during test purchases, put its printed signing secret in `STRIPE_WEBHOOK_SECRET`, and restart the development server. A dashboard endpoint cannot deliver directly to localhost. For production, register `https://<your-site>/api/stripe/webhook` in Stripe, subscribe to `checkout.session.completed`, and configure that endpoint's signing secret on the deployed server.
+Keep this command running during test purchases, put its printed signing secret in `STRIPE_WEBHOOK_SECRET`, and restart the development server. A dashboard endpoint cannot deliver directly to localhost. For production, register `https://<your-site>/api/stripe/webhook` in Stripe, subscribe to `checkout.session.completed` and `charge.refunded`, and configure that endpoint's signing secret on the deployed server.
 
 The signed webhook remains the reliable fulfillment path. The payment success page also retrieves the Checkout Session directly from Stripe and uses the same idempotent issuance function so the QR code and ticket URL can be shown immediately. Both paths attempt email delivery; already sent or currently sending orders are skipped. Email failures return a non-success webhook response so Stripe can retry without issuing another ticket. The success page still displays the ticket if email fails; revisiting it retries PENDING or FAILED delivery.
 
@@ -67,3 +67,16 @@ Run the isolated email regression checks with `node --test scripts/tests/ticket-
 顧客の会員登録・ログイン画面はありません。公開イベントのチケット購入から Stripe Checkout で名前とメールアドレスを入力し、決済が完了すると顧客・注文・チケットが自動登録されます。同じメールアドレスは既存の顧客に紐づきます。管理画面から顧客だけを手動登録する機能もありません。
 
 管理者を増やす場合、現在は同じ共通パスワードを利用します。個別のユーザー登録、パスワードリセット、権限管理が必要なら、個別アカウントの認証基盤を追加する必要があります。Basic認証にはアプリ内ログアウトがなく、ブラウザが認証情報を保持します。
+
+
+## Ticket security update (applied to the existing development database)
+
+Before deploying the holder-name/refund changes, review [the migration proposal](docs/proposals/ticket-security-migration.md). The schema and code require Ticket.holderName and RefundedPayment; the approved migration is registered at prisma/migrations/20261016000000_ticket_holder_refund_security/migration.sql and was applied to the user-selected development database on 2026-10-16. Production migration/deployment is not included; confirm the production target and stop old writers before any future production migrate deploy. Coordinate database migration, client generation, and code deployment while old issuance workers are stopped.
+
+Full refunds revoke admission; partial-refund admission behavior is intentionally unimplemented pending the owner's policy decision. A later cumulative refund that reaches the full charge amount is treated as full. Keep both webhook event subscriptions above. Existing historical refunds need an owner-approved reconciliation step.
+
+Check-in POSTs must include application/json, an Origin exactly matching the origin of NEXT_PUBLIC_APP_URL, and X-LIPS-Check-In: 1. Both built-in staff clients send the custom header; browsers supply Origin. Missing Origin is rejected, including CLI callers unless they explicitly supply it. Do not add permissive CORS. Configure NEXT_PUBLIC_APP_URL as the canonical staff-site URL for each environment.
+
+Offline regression command (15 mock tests passed with an empty application environment):
+
+    node --test scripts/tests/ticket-email.cjs scripts/tests/security-fixes.cjs

@@ -9,7 +9,7 @@ const ticketQrContentId = 'lips-ticket-qr'
 
 export async function sendTicketEmailOnce(orderId: string): Promise<void> {
   const claimed = await prisma.order.updateMany({
-    where: { id: orderId, ticketEmailStatus: { in: ['PENDING', 'FAILED'] } },
+    where: { id: orderId, paymentStatus: 'PAID', ticketEmailStatus: { in: ['PENDING', 'FAILED'] } },
     data: { ticketEmailStatus: 'SENDING' },
   })
   if (claimed.count === 0) return
@@ -18,6 +18,10 @@ export async function sendTicketEmailOnce(orderId: string): Promise<void> {
     const order = await prisma.order.findUnique({ where: { id: orderId }, include: { customer: true, event: true, tickets: true } })
     const ticket = order?.tickets[0]
     if (!order || !ticket) throw new Error('Ticket email data is missing')
+    if (order.paymentStatus !== 'PAID' || ticket.status === 'CANCELLED') {
+      await prisma.order.update({ where: { id: orderId }, data: { ticketEmailStatus: 'FAILED' } })
+      return
+    }
     const baseUrl = appUrl()
     const ticketUrl = `${baseUrl}/ticket/${ticket.accessToken}`
     const qrImage = await generateQrBuffer(ticket.qrToken)
@@ -25,7 +29,7 @@ export async function sendTicketEmailOnce(orderId: string): Promise<void> {
       from: process.env.RESEND_FROM_EMAIL ?? 'LIPS Tickets <onboarding@resend.dev>',
       to: order.customer.email,
       subject: 'Your LIPS Ticket is Ready',
-      html: ticketEmailHtml({ customerName: order.customer.name, eventName: order.event.title, eventDate: order.event.eventDate, venue: order.event.venue, ticketUrl, qrImageSrc: `cid:${ticketQrContentId}` }),
+      html: ticketEmailHtml({ customerName: ticket.holderName, eventName: order.event.title, eventDate: order.event.eventDate, venue: order.event.venue, ticketUrl, qrImageSrc: `cid:${ticketQrContentId}` }),
       attachments: [{
         filename: `lips-ticket-${ticket.id.slice(-8).toUpperCase()}.png`,
         content: qrImage,

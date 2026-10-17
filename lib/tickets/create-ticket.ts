@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client'
 import type Stripe from 'stripe'
 import { getEventById, getEventBySlug } from '@/lib/events/get-event'
 import { prisma } from '@/lib/prisma'
+import { serializableTransaction } from '@/lib/serializable-transaction'
 import { generateSecureToken } from './generate-token'
 
 function holderName(session: Stripe.Checkout.Session): string | null {
@@ -32,13 +33,17 @@ export async function issueTicketForSession(session: Stripe.Checkout.Session) {
   const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id
 
   try {
-    return await prisma.$transaction(async (tx) => {
-      const customer = await tx.customer.upsert({ where: { email }, create: { email, name }, update: { name } })
+    return await serializableTransaction(async (tx) => {
+      const refunded = paymentIntentId
+        ? await tx.refundedPayment.findUnique({ where: { paymentIntentId } })
+        : null
+      const customer = await tx.customer.upsert({ where: { email }, create: { email, name }, update: {} })
       return tx.order.create({
         data: {
           customerId: customer.id, eventId: dbEvent.id, stripeSessionId: session.id,
+          paymentStatus: refunded ? 'REFUNDED' : 'PAID',
           stripePaymentIntentId: paymentIntentId, amount: session.amount_total!, currency: session.currency!,
-          tickets: { create: { eventId: dbEvent.id, accessToken: generateSecureToken(), qrToken: generateSecureToken() } },
+          tickets: { create: { eventId: dbEvent.id, holderName: name, status: refunded ? 'CANCELLED' : 'VALID', accessToken: generateSecureToken(), qrToken: generateSecureToken() } },
         },
         include: { tickets: true },
       })
