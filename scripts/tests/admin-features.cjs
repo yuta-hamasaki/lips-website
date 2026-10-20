@@ -86,3 +86,37 @@ test('camera decoder reads the same QR payload produced by ticket generation', (
   assert.equal(readCheckInToken('https://example.invalid/not-a-ticket'), '')
   assert.equal(readCheckInToken('javascript:alert(1)'), '')
 })
+
+test('numbered accounts override legacy logins and allow independent password changes', async () => {
+  const env = {
+    ADMIN_1_USERNAME: 'owner', ADMIN_1_PASSWORD: 'first-secret',
+    ADMIN_2_USERNAME: 'staff', ADMIN_2_PASSWORD: '',
+    ADMIN_2_PASSWORD_HASH: createHash('sha256').update('existing-secret').digest('hex'),
+    ADMIN_API_KEY: 'legacy-secret', ADMIN_ACCOUNTS_JSON: 'invalid',
+  }
+  let auth = load('lib/admin-credentials.ts', env).authenticateAdmin
+  assert.equal(await auth(basic('owner', 'first-secret')), true)
+  assert.equal(await auth(basic('staff', 'existing-secret')), true)
+  assert.equal(await auth(basic('admin', 'legacy-secret')), false)
+  auth = load('lib/admin-credentials.ts', { ...env, ADMIN_2_USERNAME: 'renamed', ADMIN_2_PASSWORD: 'replacement-secret' }).authenticateAdmin
+  assert.equal(await auth(basic('renamed', 'replacement-secret')), true)
+  assert.equal(await auth(basic('renamed', 'existing-secret')), false)
+  assert.equal(await auth(basic('staff', 'replacement-secret')), false)
+  assert.equal(await auth(basic('owner', 'first-secret')), true)
+})
+
+test('numbered configuration rejects duplicates and incomplete accounts, and allows disabling one', async () => {
+  const base = { ADMIN_1_USERNAME: 'owner', ADMIN_1_PASSWORD: 'secret' }
+  for (const extra of [
+    { ADMIN_2_USERNAME: 'owner', ADMIN_2_PASSWORD: 'other' },
+    { ADMIN_2_USERNAME: 'staff' },
+    { ADMIN_2_PASSWORD: 'secret' },
+    { ADMIN_2_USERNAME: 'staff', ADMIN_2_PASSWORD_HASH: 'invalid' },
+  ]) {
+    const { authenticateAdmin } = load('lib/admin-credentials.ts', { ...base, ...extra })
+    assert.equal(await authenticateAdmin(basic('owner', 'secret')), false)
+  }
+  const { authenticateAdmin } = load('lib/admin-credentials.ts', base)
+  assert.equal(await authenticateAdmin(basic('owner', 'secret')), true)
+  assert.equal(await authenticateAdmin(basic('staff', 'secret')), false)
+})

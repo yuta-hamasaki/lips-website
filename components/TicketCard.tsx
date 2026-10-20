@@ -1,3 +1,5 @@
+import Image from 'next/image'
+import Link from 'next/link'
 import TicketActions from './TicketActions'
 import { generateQrDataUrl } from '@/lib/tickets/generate-qr'
 import type { getTicketByAccessToken } from '@/lib/tickets/get-ticket'
@@ -18,7 +20,7 @@ export default async function TicketCard({ ticket }: { ticket: NonNullable<Await
   return <div className="ticket-container">
     <article className={`ticket-card status-${ticket.status.toLowerCase()}`}>
       <div className="ticket-data">
-        <a className="brand" href="/">Lips<span>.</span></a>
+        <Link className="brand" href="/">Lips<span>.</span></Link>
         <p className="micro">{details.label}</p>
         <h1>{details.title}</h1>
         <dl>
@@ -32,7 +34,7 @@ export default async function TicketCard({ ticket }: { ticket: NonNullable<Await
       </div>
       <div className="ticket-qr">
         <p className="qr-label">YOUR ENTRY TICKET</p>
-        <img src={qr} alt="Check-in QR code" width="260" height="260" />
+        <Image src={qr} alt="Check-in QR code" width={260} height={260} unoptimized />
         <p>{ticket.status === 'VALID' ? 'Present this code at the door.' : ticket.status === 'USED' ? 'This ticket has already been used.' : 'This ticket has been cancelled.'}</p>
       </div>
     </article>

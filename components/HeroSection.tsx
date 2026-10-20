@@ -9,7 +9,7 @@ export default function HeroSection({ event }: { event: HeroEvent }) {
     <header>
       <a className="brand" href="#home">Lips<span>.</span></a>
       <nav>{['Home', 'About', 'Events', 'Lineup', 'Experience', 'Info'].map(item => <a key={item} href={`#${item.toLowerCase()}`}>{item}</a>)}</nav>
-      <div className="header-right"><span>MUSIC</span><span>PEOPLE</span><span>CULTURE</span><Globe2 size={20}/><a className="outline-button" href={event.ticketUrl ?? '#events'}>{event.ticketUrl ? 'GET TICKETS' : 'VIEW EVENTS'} <ArrowRight size={16}/></a></div>
+      <div className="header-right"><Globe2 size={20}/><a className="outline-button" href={event.ticketUrl ?? '#events'}>{event.ticketUrl ? 'GET TICKETS' : 'VIEW EVENTS'} <ArrowRight size={16}/></a></div>
       <MobileMenu/>
     </header>
     <div className="eyebrow">GOOD<br/>MUSIC<br/>BETTER<br/>PEOPLE</div>

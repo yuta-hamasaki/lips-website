@@ -8,7 +8,8 @@ import { sendTicketEmailOnce } from '@/lib/tickets/send-ticket-email'
 
 export const dynamic = 'force-dynamic'
 
-export default async function SuccessPage({ searchParams }: { searchParams: { session_id?: string } }) {
+export default async function SuccessPage({ searchParams: routeInput }: { searchParams: Promise<{ session_id?: string }> }) {
+  const searchParams = await routeInput
   const sessionId = searchParams.session_id
   let order = sessionId ? await prisma.order.findUnique({ where: { stripeSessionId: sessionId }, include: { tickets: true } }) : null
 

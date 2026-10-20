@@ -15,12 +15,16 @@ for (const name of ['.env', '.env.local']) {
   if (!existsSync(file)) continue
   if (lstatSync(file).isSymbolicLink()) throw new Error('Environment file must not be a symlink')
   for (const line of readFileSync(file, 'utf8').split('\n')) {
-    const match = line.match(/^\s*([A-Z_]+)\s*=\s*(.*?)\s*$/)
+    const match = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*?)\s*$/)
     if (!match) continue
     let value = match[2]
     if ((value.startsWith("'") && value.endsWith("'")) || (value.startsWith('"') && value.endsWith('"'))) value = value.slice(1, -1)
     values[match[1]] = value
   }
+}
+if (['ADMIN_1_USERNAME', 'ADMIN_1_PASSWORD', 'ADMIN_2_USERNAME', 'ADMIN_2_PASSWORD'].some(key => key in values)) {
+  console.error('Manage administrator usernames and passwords in ADMIN_1_USERNAME / ADMIN_1_PASSWORD and ADMIN_2_USERNAME / ADMIN_2_PASSWORD in your environment file. This legacy script does not modify those settings.')
+  process.exit(1)
 }
 if (username === (values.ADMIN_USERNAME || 'admin')) throw new Error('Username is reserved for the existing primary administrator')
 let accounts

@@ -1,5 +1,4 @@
 import EventsSection from '@/components/EventsSection'
-import ExperienceSection from '@/components/ExperienceSection'
 import HeroSection from '@/components/HeroSection'
 import LineupSection from '@/components/LineupSection'
 import SiteFooter from '@/components/SiteFooter'
@@ -22,7 +21,6 @@ export default async function Home() {
     <HeroSection event={heroEvent}/>
     <EventsSection events={events} now={now}/>
     <LineupSection artists={artists}/>
-    <ExperienceSection/>
     <TicketsSection event={heroEvent}/>
     <SiteFooter/>
   </main>

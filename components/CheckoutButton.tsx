@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 import { useState } from 'react'
 
 export default function CheckoutButton({ eventSlug, disabled = false }: { eventSlug: string; disabled?: boolean }) {
@@ -14,5 +16,5 @@ export default function CheckoutButton({ eventSlug, disabled = false }: { eventS
       window.location.assign(result.url)
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Checkout is unavailable.'); setLoading(false) }
   }
-  return <div><button className="ticket-button" type="button" onClick={checkout} disabled={disabled || loading}>{loading ? 'OPENING CHECKOUT…' : 'BUY TICKET'}</button>{error && <p className="form-error" role="alert">{error}</p>}</div>
+  return <div><p className="sales-note">Before purchasing, review our <Link href="/terms">ticket terms</Link> and <Link href="/privacy">privacy policy</Link>. Contact the organiser to confirm refund conditions.</p><button className="ticket-button" type="button" onClick={checkout} disabled={disabled || loading}>{loading ? 'OPENING CHECKOUT…' : 'BUY TICKET'}</button>{error && <p className="form-error" role="alert">{error}</p>}</div>
 }

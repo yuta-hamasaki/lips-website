@@ -30,7 +30,7 @@ export default function AdminSalesChart({ orders, now }: { orders: SalesOrder[];
     {!count ? <p className="sales-empty">この期間の決済済み注文はありません。</p> : <svg viewBox="0 0 900 280" role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
       {ticks.map(value => <g key={value}><line x1="64" x2="864" y1={y(value)} y2={y(value)} stroke="currentColor" opacity=".15"/><text x="54" y={y(value) + 4} textAnchor="end">{metric === 'count' ? value : money(value)}</text></g>)}
       <polyline points={line} fill="none" stroke="#ff8fc7" strokeWidth="3" vectorEffect="non-scaling-stroke"/>
-      {points.filter(point => point[metric] > 0).map(point => <circle key={point.date} cx={x(points.indexOf(point))} cy={y(point[metric])} r="3" fill="#ff3292"><title>{point.date}: {money(point.amount)} / {point.count} 注文</title></circle>)}
+      {points.filter(point => point[metric] > 0).map(point => <circle key={point.date} cx={x(points.indexOf(point))} cy={y(point[metric])} r="3" fill="#ff3292"><title>{`${point.date}: ${money(point.amount)} / ${point.count} 注文`}</title></circle>)}
       {points.map((point, index) => (index === 0 || index === points.length - 1 || index % Math.max(1, Math.ceil(points.length / 5)) === 0) && <text key={point.date} x={x(index)} y="266" textAnchor="middle">{point.date.slice(5)}</text>)}
     </svg>}
     <details><summary>日別の数値を見る</summary><div className="table-wrap"><table><thead><tr><th>購入日</th><th>売上（{currency}）</th><th>注文数</th></tr></thead><tbody>{points.filter(point => point.count).map(point => <tr key={point.date}><td>{point.date}</td><td>{money(point.amount)}</td><td>{point.count}</td></tr>)}</tbody></table>{!count && <p>該当データなし</p>}</div></details>

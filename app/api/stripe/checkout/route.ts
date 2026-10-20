@@ -1,3 +1,4 @@
+import { ticketSalesOpen } from '@/lib/ticket-sales'
 import { NextResponse } from 'next/server'
 import { appUrl } from '@/lib/env'
 import { getEventBySlug } from '@/lib/events/get-event'
@@ -11,12 +12,12 @@ export async function POST(request: Request) {
     const cmsEvent = await getEventBySlug(body.eventSlug)
     if (!cmsEvent || cmsEvent.status !== 'published') return NextResponse.json({ error: 'Event not found.' }, { status: 404 })
     if (!cmsEvent.stripePriceId) return NextResponse.json({ error: 'Tickets are not available.' }, { status: 409 })
-    const now = Date.now()
-    if ((cmsEvent.ticketSalesStart && now < new Date(cmsEvent.ticketSalesStart).getTime()) || (cmsEvent.ticketSalesEnd && now > new Date(cmsEvent.ticketSalesEnd).getTime())) return NextResponse.json({ error: 'Ticket sales are closed.' }, { status: 409 })
+    if (!ticketSalesOpen(cmsEvent)) return NextResponse.json({ error: 'Ticket sales are closed.' }, { status: 409 })
     const event = await syncEvent(cmsEvent)
     const baseUrl = appUrl()
     const session = await getStripe().checkout.sessions.create({
       mode: 'payment',
+      payment_method_types: ['card'],
       line_items: [{ price: cmsEvent.stripePriceId, quantity: 1 }],
       customer_creation: 'always',
       custom_fields: [{ key: 'ticket_holder_name', label: { type: 'custom', custom: 'Ticket holder name' }, type: 'text', optional: false }],

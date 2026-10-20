@@ -1,10 +1,13 @@
+import { requireAdminSession } from '@/lib/require-admin-session'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { adminDate, revenueByCurrency } from '@/lib/admin-format'
 
 export const dynamic = 'force-dynamic'
 
-export default async function AdminCustomersPage({ searchParams }: { searchParams: { q?: string } }) {
+export default async function AdminCustomersPage({ searchParams: routeInput }: { searchParams: Promise<{ q?: string }> }) {
+  await requireAdminSession()
+  const searchParams = await routeInput
   const query = (searchParams.q ?? '').trim().slice(0, 200)
   const customers = await prisma.customer.findMany({
     where: query ? { OR: [{ name: { contains: query, mode: 'insensitive' } }, { email: { contains: query, mode: 'insensitive' } }] } : undefined,

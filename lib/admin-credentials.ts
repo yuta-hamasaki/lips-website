@@ -1,5 +1,23 @@
 // Shared by Edge middleware and Node routes. Never import into client components.
 type AdminAccount = { username: string; passwordHash: string }
+type PasswordAccount = { username: string; password: string; passwordHash?: string }
+
+function managedAccounts(): PasswordAccount[] | null | undefined {
+  const entries = [
+    { username: process.env.ADMIN_1_USERNAME, password: process.env.ADMIN_1_PASSWORD, passwordHash: process.env.ADMIN_1_PASSWORD_HASH },
+    { username: process.env.ADMIN_2_USERNAME, password: process.env.ADMIN_2_PASSWORD, passwordHash: process.env.ADMIN_2_PASSWORD_HASH },
+  ]
+  if (entries.every(entry => entry.username === undefined && entry.password === undefined && entry.passwordHash === undefined)) return undefined
+  const configured: PasswordAccount[] = []
+  const names = new Set<string>()
+  for (const entry of entries) {
+    if (!entry.username && !entry.password && !entry.passwordHash) continue
+    if (!entry.username || !/^[a-zA-Z0-9._-]{1,64}$/.test(entry.username) || (!entry.password && !/^[a-f0-9]{64}$/.test(entry.passwordHash || '')) || names.has(entry.username)) return null
+    names.add(entry.username)
+    configured.push({ username: entry.username, password: entry.password || '', passwordHash: entry.passwordHash })
+  }
+  return configured
+}
 
 function accounts(): AdminAccount[] | null {
   if (!process.env.ADMIN_ACCOUNTS_JSON) return []
@@ -29,8 +47,9 @@ async function digest(value: string): Promise<string> {
 
 export async function authenticateAdmin(authorization: string | null): Promise<boolean> {
   if (!authorization?.startsWith('Basic ') || authorization.length > 2048) return false
-  const configured = accounts()
-  if (configured === null) return false
+  const managed = managedAccounts()
+  const configured = managed === undefined ? accounts() : []
+  if (managed === null || configured === null) return false
   let username: string, password: string
   try {
     const bytes = Uint8Array.from(atob(authorization.slice(6)), character => character.charCodeAt(0))
@@ -41,7 +60,16 @@ export async function authenticateAdmin(authorization: string | null): Promise<b
     password = decoded.slice(colon + 1)
   } catch { return false }
   const actual = await digest(password)
-  // Preserve the original admin password, now bound to its documented username.
+  if (managed !== undefined) {
+    let permitted = false
+    for (const account of managed) {
+      const passwordMatches = equal(actual, account.password ? await digest(account.password) : account.passwordHash!)
+      const usernameMatches = equal(username, account.username)
+      if (passwordMatches && usernameMatches) permitted = true
+    }
+    return permitted
+  }
+  // Compatibility for deployments that still use the previous settings.
   const primaryName = process.env.ADMIN_USERNAME || 'admin'
   const primaryKey = process.env.ADMIN_API_KEY
   let permitted = false

@@ -4,7 +4,8 @@ import { getTicketByAccessToken } from '@/lib/tickets/get-ticket'
 
 export const dynamic = 'force-dynamic'
 
-export default async function TicketPage({ params }: { params: { accessToken: string } }) {
+export default async function TicketPage({ params: routeInput }: { params: Promise<{ accessToken: string }> }) {
+  const params = await routeInput
   const ticket = await getTicketByAccessToken(params.accessToken)
 
   if (!ticket) {

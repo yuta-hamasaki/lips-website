@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server'
-import { authenticateAdmin } from '@/lib/admin-credentials'
+import { ADMIN_COOKIE, verifyAdminSession } from '@/lib/admin-session'
 
 export function isAdminRequest(request: NextRequest): Promise<boolean> {
-  return authenticateAdmin(request.headers.get('authorization'))
+  return verifyAdminSession(request.cookies.get(ADMIN_COOKIE)?.value)
 }

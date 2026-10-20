@@ -44,6 +44,7 @@ model Order {
   paymentStatus         PaymentStatus @default(PAID)
   ticketEmailStatus     EmailStatus   @default(PENDING)
   ticketEmailSentAt     DateTime?
+  ticketEmailClaimedAt  DateTime?
   customer              Customer      @relation(fields: [customerId], references: [id])
   event                 Event         @relation(fields: [eventId], references: [id])
   tickets               Ticket[]
@@ -95,4 +96,11 @@ model RefundedPayment {
   paymentIntentId String   @id
   stripeEventId   String   @unique
   createdAt       DateTime @default(now())
+}
+
+// Shared across application instances; avoids per-process login limits.
+model AdminLoginRateLimit {
+  key       String   @id
+  attempts  Int      @default(0)
+  resetAt   DateTime
 }

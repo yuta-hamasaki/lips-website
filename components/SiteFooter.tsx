@@ -1,3 +1,6 @@
+import Link from 'next/link'
+import { contactEmail } from '@/lib/contact'
+
 export default function SiteFooter() {
-  return <footer id="contact"><a className="brand" href="#home">Lips<span>.</span></a><p>© 2026 LIPS. MUSIC PEOPLE CULTURE.</p><div><a href="mailto:hello@lips.events">CONTACT</a><a href="#privacy">PRIVACY</a><a href="#instagram">INSTAGRAM</a></div><span>GOOD MUSIC BETTER PEOPLE ✦</span></footer>
+  return <footer id="contact"><Link className="brand" href="/">Lips<span>.</span></Link><p>© 2026 LIPS. MUSIC PEOPLE CULTURE.</p><div><a href={`mailto:${contactEmail}`}>CONTACT</a><Link href="/privacy">PRIVACY</Link><Link href="/terms">TICKET TERMS</Link><a href="https://www.instagram.com/lips_event_vancouver/" target="_blank" rel="noopener noreferrer">INSTAGRAM</a></div><span>GOOD MUSIC BETTER PEOPLE ✦</span></footer>
 }

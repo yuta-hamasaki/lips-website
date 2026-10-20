@@ -21,8 +21,10 @@ function load(file, mocks) {
   return exports
 }
 
-function emailHarness({ preparationFails = false, sendFails = false, paid = true, cancelled = false } = {}) {
-  let status = 'PENDING'
+function emailHarness({ preparationFails = false, sendFails = false, paid = true, cancelled = false, initialStatus = 'PENDING', claimedMinutesAgo = 0 } = {}) {
+  let status = initialStatus
+  let claimTime = new Date(Date.now() - claimedMinutesAgo * 60 * 1000)
+  let idempotencyKey
   let sends = 0
   let renderedName
   const order = {
@@ -34,20 +36,26 @@ function emailHarness({ preparationFails = false, sendFails = false, paid = true
     '@/emails/ticket-email': { ticketEmailHtml: props => { renderedName = props.customerName; return '<p>Ticket</p>' } },
     '@/lib/env': { appUrl: () => { if (preparationFails) throw new Error('Missing URL'); return 'https://example.com' } },
     '@/lib/prisma': { prisma: { order: {
-      updateMany: async () => {
-        if (!paid || !['PENDING', 'FAILED'].includes(status)) return { count: 0 }
-        status = 'SENDING'; return { count: 1 }
+      updateMany: async ({where, data}) => {
+        if (data.ticketEmailStatus !== 'SENDING') {
+          if (status !== 'SENDING' || claimTime !== where.ticketEmailClaimedAt) return { count: 0 }
+          status = data.ticketEmailStatus; return {count: 1}
+        }
+        const expired = status === 'SENDING' && claimTime < where.OR[1].ticketEmailClaimedAt.lt
+        if (!paid || (!['PENDING', 'FAILED'].includes(status) && !expired)) return { count: 0 }
+        status = 'SENDING'; claimTime = data.ticketEmailClaimedAt; return { count: 1 }
       },
       findUnique: async () => order,
       update: async ({ data }) => { status = data.ticketEmailStatus },
     } } },
-    '@/lib/resend': { getResend: () => ({ emails: { send: async () => {
+    '@/lib/resend': { getResend: () => ({ emails: { send: async (_message, options) => {
+      idempotencyKey = options?.idempotencyKey
       sends++
       return sendFails ? { error: { message: 'Rejected' } } : { data: { id: 'email-1' } }
     } } }) },
     '@/lib/tickets/generate-qr': { generateQrBuffer: async () => Buffer.from('qr') },
   })
-  return { ...api, status: () => status, sends: () => sends, renderedName: () => renderedName }
+  return { ...api, key: () => idempotencyKey, status: () => status, sends: () => sends, renderedName: () => renderedName }
 }
 
 test('concurrent delivery and repeat calls send the ticket once', async () => {
@@ -107,4 +115,17 @@ test('refunded orders and cancelled tickets never send a ready email', async () 
     await h.sendTicketEmailOnce('order-1')
     assert.equal(h.sends(), 0)
   }
+})
+
+
+test('stale SENDING emails can recover, active sends remain locked, and retries use a stable provider key', async () => {
+  const stale = emailHarness({ initialStatus: 'SENDING', claimedMinutesAgo: 11 })
+  await stale.sendTicketEmailOnce('order-1')
+  assert.equal(stale.status(), 'SENT')
+  assert.equal(stale.sends(), 1)
+  assert.equal(stale.key(), 'ticket-email/order-1')
+  const active = emailHarness({ initialStatus: 'SENDING', claimedMinutesAgo: 1 })
+  await active.sendTicketEmailOnce('order-1')
+  assert.equal(active.sends(), 0)
+  assert.equal(active.status(), 'SENDING')
 })
