@@ -11,7 +11,9 @@ const nextConfig = {
       ] },
       ...['/admin/:path*', '/ticket/:path*', '/payment/:path*', '/api/tickets/:path*'].map(source => ({ source, headers: [
         { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
-        { key: 'Referrer-Policy', value: 'no-referrer' },
+        // HTML form POSTs need their Origin for admin CSRF validation.
+        // same-origin preserves it while withholding referrers from other sites.
+        { key: 'Referrer-Policy', value: source === '/admin/:path*' ? 'same-origin' : 'no-referrer' },
         { key: 'Cache-Control', value: 'private, no-store' },
       ] })),
     ]

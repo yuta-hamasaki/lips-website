@@ -1,5 +1,7 @@
 # LIPS ticketing setup
 
+初回公開は [公開手順書](docs/DEPLOYMENT.md) を参照してください。
+
 ## Services
 
 - **microCMS** owns event content. Create an `events` endpoint with the fields represented by `CmsEvent` in `lib/events/types.ts`. `stripePriceId` is only a reference; Stripe Price owns the charged unit amount.
