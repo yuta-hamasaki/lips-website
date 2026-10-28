@@ -20,6 +20,7 @@ export async function POST(request: Request) {
       payment_method_types: ['card'],
       line_items: [{ price: cmsEvent.stripePriceId, quantity: 1 }],
       customer_creation: 'always',
+      allow_promotion_codes: true, 
       custom_fields: [{ key: 'ticket_holder_name', label: { type: 'custom', custom: 'Ticket holder name' }, type: 'text', optional: false }],
       metadata: { eventId: event.id, microCmsEventId: cmsEvent.id, eventSlug: cmsEvent.slug },
       success_url: `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
